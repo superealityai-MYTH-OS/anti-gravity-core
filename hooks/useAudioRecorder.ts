@@ -17,7 +17,7 @@ export function useAudioRecorder(
         try {
             let ctx = inputContextRef.current;
             if (!ctx) {
-                const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+                const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
                 ctx = new AudioContextClass({ sampleRate: 16000 });
                 inputContextRef.current = ctx;
                 setInputContext(ctx);
@@ -39,7 +39,7 @@ export function useAudioRecorder(
                 for (let i = 0; i < inputData.length; i++) sum += inputData[i] * inputData[i];
                 const rms = Math.sqrt(sum / inputData.length);
 
-                onAudioData(pcmBlob as any, rms);
+                onAudioData(pcmBlob, rms);
             };
 
             sourceRef.current.connect(processorRef.current);
