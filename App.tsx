@@ -37,6 +37,7 @@ function AppContent() {
     const audioContextRef = useRef<AudioContext | null>(null);
 
     // Visualization
+    const analyserRef = useRef<AnalyserNode | null>(null);
     const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
 
     const onVisualTrigger = useCallback(() => {
@@ -87,8 +88,9 @@ function AppContent() {
             outputGainRef.current.connect(newAnalyser);
             newAnalyser.connect(audioContext.destination);
 
-            // eslint-disable-next-line react-hooks/rules-of-hooks
-            setAnalyser(newAnalyser);
+            analyserRef.current = newAnalyser;
+            // Trigger a re-render by updating state in the next tick to avoid cascading renders
+            Promise.resolve().then(() => setAnalyser(newAnalyser));
         }
     }, [audioContext, config.volume]);
 
@@ -134,8 +136,9 @@ function AppContent() {
 
     // Cleanup Effect
     useEffect(() => {
+        const sources = scheduledSourcesRef.current;
         return () => {
-            scheduledSourcesRef.current.forEach(s => s.stop());
+            sources.forEach(s => s.stop());
         };
     }, []);
 
