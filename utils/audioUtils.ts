@@ -24,7 +24,7 @@ export function arrayBufferToBase64(buffer: ArrayBuffer): string {
  * @param base64 - Base64 string that may be missing padding
  * @returns Base64 string with proper padding
  */
-function addBase64Padding(base64: string): string {
+export function addBase64Padding(base64: string): string {
   const padding = base64.length % 4;
   if (padding > 0) {
     return base64 + '='.repeat(4 - padding);
@@ -69,11 +69,8 @@ export function base64ToArrayBuffer(base64: string): ArrayBuffer {
     ? urlSafeBase64ToStandard(base64) 
     : base64;
   
-  // urlSafeBase64ToStandard already adds padding, but handle cases where
-  // standard base64 might be missing padding too
-  const paddedBase64 = standardBase64.endsWith('=') 
-    ? standardBase64 
-    : addBase64Padding(standardBase64);
+  // Ensure padding is present (addBase64Padding is idempotent)
+  const paddedBase64 = addBase64Padding(standardBase64);
   
   const binaryString = atob(paddedBase64);
   const len = binaryString.length;
