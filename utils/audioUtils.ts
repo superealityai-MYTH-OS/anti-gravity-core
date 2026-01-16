@@ -19,8 +19,52 @@ export function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
+/**
+ * Converts a URL-safe base64 string to standard base64
+ * @param urlSafeBase64 - URL-safe base64 string (using - and _ instead of + and /)
+ * @returns Standard base64 string
+ */
+export function urlSafeBase64ToStandard(urlSafeBase64: string): string {
+  // Replace URL-safe characters with standard base64 characters
+  let base64 = urlSafeBase64.replace(/-/g, '+').replace(/_/g, '/');
+  
+  // Add padding if needed
+  const padding = base64.length % 4;
+  if (padding > 0) {
+    base64 += '='.repeat(4 - padding);
+  }
+  
+  return base64;
+}
+
+/**
+ * Converts a standard base64 string to URL-safe base64
+ * @param base64 - Standard base64 string
+ * @returns URL-safe base64 string (without padding)
+ */
+export function standardBase64ToUrlSafe(base64: string): string {
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/**
+ * Converts base64 string (standard or URL-safe) to ArrayBuffer
+ * @param base64 - Base64 string (can be standard or URL-safe format)
+ * @returns ArrayBuffer containing the decoded data
+ */
 export function base64ToArrayBuffer(base64: string): ArrayBuffer {
-  const binaryString = atob(base64);
+  // Convert URL-safe base64 to standard if needed
+  const standardBase64 = base64.includes('-') || base64.includes('_') 
+    ? urlSafeBase64ToStandard(base64) 
+    : base64;
+  
+  // Add padding if missing for standard base64
+  let paddedBase64 = standardBase64;
+  const padding = standardBase64.length % 4;
+  if (padding > 0 && !standardBase64.endsWith('=')) {
+    paddedBase64 += '='.repeat(4 - padding);
+  }
+  
+  const binaryString = atob(paddedBase64);
   const len = binaryString.length;
   const bytes = new Uint8Array(len);
   for (let i = 0; i < len; i++) {
