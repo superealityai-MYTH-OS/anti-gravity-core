@@ -36,8 +36,7 @@ function AppContent() {
     // We need a ref to access audioContext inside the callback (which is defined before audioContext is available from the hook)
     const audioContextRef = useRef<AudioContext | null>(null);
 
-    // Visualization
-    const analyserRef = useRef<AnalyserNode | null>(null);
+    // Visualization  
     const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
 
     const onVisualTrigger = useCallback(() => {
@@ -88,11 +87,10 @@ function AppContent() {
             outputGainRef.current.connect(newAnalyser);
             newAnalyser.connect(audioContext.destination);
 
-            analyserRef.current = newAnalyser;
-            // Trigger a re-render by updating state in the next tick to avoid cascading renders
-            Promise.resolve().then(() => setAnalyser(newAnalyser));
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- Initializing audio graph when context becomes available
+            setAnalyser(newAnalyser);
         }
-    }, [audioContext, config.volume]);
+    }, [audioContext]);
 
     // Update Volume
     useEffect(() => {
