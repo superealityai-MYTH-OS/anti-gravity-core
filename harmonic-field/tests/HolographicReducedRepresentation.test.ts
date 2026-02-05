@@ -56,8 +56,10 @@ describe('HolographicReducedRepresentation', () => {
       // Verify recovered vector has correct structure
       expect(a_recovered.size()).toBe(128);
       
-      // Double unbinding accumulates noise, but should still have some correlation
+      // Double unbinding accumulates noise, but should still have SOME weak correlation
+      // Based on empirical testing with this FFT implementation, we use a very low threshold
       const similarity = HRR.similarity(a, a_recovered);
+      expect(similarity).toBeGreaterThan(0.01); // Very conservative threshold for double unbinding
       expect(similarity).toBeDefined();
       expect(similarity).not.toBeNaN();
     });
