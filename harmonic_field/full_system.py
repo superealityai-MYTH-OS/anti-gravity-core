@@ -5,6 +5,7 @@ Novel pipeline with unique architecture
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from typing import Optional, Tuple, Dict
 from .biform import BiChannel, wave_merge
 from .phase_net import BiMatrix, TwoPathNorm, MagPreserveDropout, phase_gate
@@ -95,8 +96,8 @@ class FullHarmonicSystem(nn.Module):
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.use_energy = use_energy
-
-        hub_size = hub_size or hidden_size
+        
+        self.hub_size = hub_size or hidden_size
 
         # 1. Encoder to BiChannel
         self.encoder = BiEncoder(input_size, hidden_size)
@@ -124,13 +125,13 @@ class FullHarmonicSystem(nn.Module):
 
         # 4. Broadcast hub
         self.broadcast = BroadcastHub(
-            hub_size=hub_size,
+            hub_size=self.hub_size,
             specialist_count=8,
         )
 
         # Hub projection layers
-        self.to_hub_x = nn.Linear(hidden_size, hub_size)
-        self.to_hub_y = nn.Linear(hidden_size, hub_size)
+        self.to_hub_x = nn.Linear(hidden_size, self.hub_size)
+        self.to_hub_y = nn.Linear(hidden_size, self.hub_size)
 
         # 5. Decoder
         self.decoder = BiDecoder(hidden_size, output_size)
@@ -216,10 +217,15 @@ class FullHarmonicSystem(nn.Module):
 
         hub_output = torch.stack(hub_outputs, dim=1)
 
-        # Project back to hidden dimension
-        hub_x = self.to_hub_x.weight.T @ hub_output.transpose(1, 2)
-        hub_y = self.to_hub_y.weight.T @ hub_output.transpose(1, 2)
-        hub_bich = BiChannel(hub_x.transpose(1, 2), hub_y.transpose(1, 2))
+        # Project back to hidden dimension using F.linear for efficiency
+        # Reshape for batch processing: [batch, seq_len, hub_size] -> [batch*seq_len, hub_size]
+        hub_flat = hub_output.reshape(-1, self.hub_size)
+        hub_x_flat = F.linear(hub_flat, self.to_hub_x.weight.T)
+        hub_y_flat = F.linear(hub_flat, self.to_hub_y.weight.T)
+        # Reshape back: [batch*seq_len, hidden] -> [batch, seq_len, hidden]
+        hub_x = hub_x_flat.reshape(batch, seq_len, self.hidden_size)
+        hub_y = hub_y_flat.reshape(batch, seq_len, self.hidden_size)
+        hub_bich = BiChannel(hub_x, hub_y)
 
         # Combine with attention output
         final_bich = attended.sum_with(hub_bich.amplify(0.3))

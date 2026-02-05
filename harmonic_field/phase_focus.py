@@ -233,9 +233,9 @@ class UnexpectedJump(nn.Module):
 
         # Replace jump positions with high-surprise values
         if jump_indicators.any():
-            surprise_values = values[
-                torch.arange(batch).unsqueeze(1), surprise_idx
-            ]
+            # Create batch indices that match surprise_idx shape
+            batch_idx = torch.arange(batch, device=input_data.device).unsqueeze(1).expand(-1, seq_len)
+            surprise_values = values[batch_idx, surprise_idx]
             attended = torch.where(
                 jump_indicators.unsqueeze(-1), surprise_values, attended
             )

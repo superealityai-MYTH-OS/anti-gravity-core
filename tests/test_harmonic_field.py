@@ -118,7 +118,10 @@ for _ in range(28):
     ((learner(xdat)[0]-ydat)**2).mean().backward()
     optim.step()
 lossf = ((learner(xdat)[0]-ydat)**2).mean().item()
-verify("XOR learning", lossf < loss0*0.8)
+# Check both loss reduction and prediction accuracy
+preds = learner(xdat)[0]
+correct = ((preds > 0.5).float() == ydat).float().mean().item()
+verify("XOR learning", lossf < loss0*0.8 and correct >= 0.5)
 
 passed = sum(1 for _,c in results if c)
 print(f"\n{passed}/{len(results)} verifications passed")

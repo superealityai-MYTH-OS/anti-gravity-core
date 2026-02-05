@@ -5,6 +5,7 @@ Novel implementation using prediction error monitoring
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from enum import Enum
 from typing import Optional, Tuple, Dict
 
