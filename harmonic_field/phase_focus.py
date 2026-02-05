@@ -69,8 +69,10 @@ class BiPhaseScorer(nn.Module):
         key_rad, key_ang = key.extract_polar()
 
         # Phase alignment score
-        angle_diff = query_ang.unsqueeze(-1) - key_ang.unsqueeze(-2)
-        phase_score = torch.cos(angle_diff)  # [batch, heads, seq_q, seq_k]
+        # query: [batch, heads, seq_q, per_head] -> [batch, heads, seq_q, 1, per_head]
+        # key:   [batch, heads, seq_k, per_head] -> [batch, heads, 1, seq_k, per_head]
+        angle_diff = query_ang.unsqueeze(-2) - key_ang.unsqueeze(-3)
+        phase_score = torch.cos(angle_diff).mean(dim=-1)  # Average over features: [batch, heads, seq_q, seq_k]
 
         # Magnitude dot product
         mag_score = torch.matmul(query_rad, key_rad.transpose(-2, -1)) / self.scale

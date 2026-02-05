@@ -107,17 +107,26 @@ class TwoPathNorm(nn.Module):
         """
         Apply covariance-based whitening transformation
         """
+        # Flatten all dims except last for batch norm
+        original_shape = incoming.axis_x.shape
+        if len(original_shape) > 2:
+            flat_x = incoming.axis_x.reshape(-1, original_shape[-1])
+            flat_y = incoming.axis_y.reshape(-1, original_shape[-1])
+        else:
+            flat_x = incoming.axis_x
+            flat_y = incoming.axis_y
+        
         if self.training:
             # Batch statistics
-            batch_mean_x = incoming.axis_x.mean(dim=0)
-            batch_mean_y = incoming.axis_y.mean(dim=0)
+            batch_mean_x = flat_x.mean(dim=0, keepdim=False)
+            batch_mean_y = flat_y.mean(dim=0, keepdim=False)
 
-            centered_x = incoming.axis_x - batch_mean_x
-            centered_y = incoming.axis_y - batch_mean_y
+            centered_x = flat_x - batch_mean_x
+            centered_y = flat_y - batch_mean_y
 
-            var_x = (centered_x ** 2).mean(dim=0)
-            var_y = (centered_y ** 2).mean(dim=0)
-            cov_xy = (centered_x * centered_y).mean(dim=0)
+            var_x = (centered_x ** 2).mean(dim=0, keepdim=False)
+            var_y = (centered_y ** 2).mean(dim=0, keepdim=False)
+            cov_xy = (centered_x * centered_y).mean(dim=0, keepdim=False)
 
             # Update running estimates
             with torch.no_grad():
@@ -133,9 +142,8 @@ class TwoPathNorm(nn.Module):
             var_y = self.track_var_y
             cov_xy = self.track_cov_xy
 
-        # Center
-        centered_x = incoming.axis_x - batch_mean_x
-        centered_y = incoming.axis_y - batch_mean_y
+            centered_x = flat_x - batch_mean_x
+            centered_y = flat_y - batch_mean_y
 
         # Compute inverse covariance for whitening
         # C^-1 = [a, b; b, c] where det = var_x*var_y - cov^2
@@ -147,6 +155,11 @@ class TwoPathNorm(nn.Module):
         # Apply whitening transformation
         whitened_x = inv_a * centered_x + inv_b * centered_y
         whitened_y = inv_b * centered_x + inv_c * centered_y
+
+        # Reshape back to original shape
+        if len(original_shape) > 2:
+            whitened_x = whitened_x.reshape(original_shape)
+            whitened_y = whitened_y.reshape(original_shape)
 
         # Learnable affine transformation (as dual number)
         gain = BiChannel(self.gain_x, self.gain_y)

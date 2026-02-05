@@ -128,7 +128,8 @@ class BroadcastHub(nn.Module):
 
     def _trigger_broadcast(self, content: torch.Tensor):
         """Update global hub (broadcast event)"""
-        self.hub_content = content.detach()
+        # Average across batch to maintain [1, hub_size] shape
+        self.hub_content = content.mean(dim=0, keepdim=True).detach()
         self.broadcast_counter += 1
 
     def forward(
